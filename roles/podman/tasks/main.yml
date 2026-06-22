@@ -1,0 +1,118 @@
+---
+# Install Podman and compatibility utilities on supported distributions
+
+- name: Load OS-specific variables
+  ansible.builtin.include_vars: "{{ ansible_os_family }}.yml"
+
+- name: Remove legacy Docker packages (RedHat)
+  ansible.builtin.dnf:
+    name: "{{ podman_legacy_packages }}"
+    state: absent
+  when: ansible_os_family == 'RedHat'
+
+- name: Remove legacy Docker packages (Debian)
+  ansible.builtin.apt:
+    name: "{{ podman_legacy_packages }}"
+    state: absent
+  when: ansible_os_family == 'Debian'
+
+- name: Install Podman and Docker compatibility packages (RedHat)
+  ansible.builtin.dnf:
+    name: "{{ podman_packages }}"
+    state: present
+    update_cache: true
+  environment: "{{ proxy_env }}"
+  when: ansible_os_family == 'RedHat'
+
+- name: Install Podman and Docker compatibility packages (Debian)
+  ansible.builtin.apt:
+    name: "{{ podman_packages }}"
+    state: present
+    update_cache: true
+  environment: "{{ proxy_env }}"
+  when: ansible_os_family == 'Debian'
+
+- name: Ensure Podman configuration directory exists
+  ansible.builtin.file:
+    path: /etc/containers
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Configure Podman default registries
+  ansible.builtin.copy:
+    dest: /etc/containers/registries.conf
+    content: |
+      unqualified-search-registries = {{ podman_unqualified_search_registries | to_json }}
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Create systemd directory for Podman proxy configuration
+  ansible.builtin.file:
+    path: /etc/systemd/system/podman.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  when: (use_proxy | bool) and http_proxy != ""
+
+- name: Configure Podman service proxy environment variables
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/podman.service.d/http-proxy.conf
+    content: |
+      [Service]
+      Environment="HTTP_PROXY={{ http_proxy }}"
+      Environment="HTTPS_PROXY={{ https_proxy }}"
+      Environment="NO_PROXY=localhost,127.0.0.1"
+    owner: root
+    group: root
+    mode: '0644'
+  when: (use_proxy | bool) and http_proxy != ""
+  notify:
+    - Restart podman service
+    - Restart podman socket
+
+- name: Start and enable Podman socket
+  ansible.builtin.systemd:
+    name: podman.socket
+    state: "{{ podman_service_state }}"
+    enabled: "{{ podman_service_enabled }}"
+    daemon_reload: true
+
+- name: Start and enable Podman container restart service
+  ansible.builtin.systemd:
+    name: podman-restart
+    state: started
+    enabled: true
+    daemon_reload: true
+
+- name: Ensure docker.sock symlink exists for Docker API compatibility
+  ansible.builtin.file:
+    src: /var/run/podman/podman.sock
+    dest: /var/run/docker.sock
+    state: link
+    force: true
+
+- name: Find podman-compose path
+  ansible.builtin.command: which podman-compose
+  register: podman_compose_path
+  changed_when: false
+  failed_when: false
+
+- name: Ensure docker-compose symlink exists for tool compatibility
+  ansible.builtin.file:
+    src: "{{ podman_compose_path.stdout | trim }}"
+    dest: /usr/bin/docker-compose
+    state: link
+    force: true
+  when: podman_compose_path.rc == 0
+
+- name: Add user to podman group
+  ansible.builtin.user:
+    name: "{{ ansible_user | default(ansible_env.USER) }}"
+    groups: "{{ podman_group }}"
+    append: true
+  failed_when: false
+

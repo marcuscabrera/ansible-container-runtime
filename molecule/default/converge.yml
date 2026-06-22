@@ -1,0 +1,24 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    container_runtime: docker
+    portainer_enabled: false 
+
+  tasks:
+    - name: "Include Docker role"
+      ansible.builtin.include_role:
+        name: docker
+      when: container_runtime == 'docker'
+
+    - name: "Include Podman role"
+      ansible.builtin.include_role:
+        name: podman
+      when: container_runtime == 'podman'
+
+    - name: "Include Portainer role"
+      ansible.builtin.include_role:
+        name: portainer

@@ -1,0 +1,7 @@
+---
+# Defaults for Portainer role
+portainer_enabled: true
+portainer_dest_dir: /opt/portainer
+portainer_version: latest
+portainer_http_port: 9000
+portainer_https_port: 9443

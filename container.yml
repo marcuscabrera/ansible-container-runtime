@@ -1,0 +1,21 @@
+---
+- name: Provision Linux server and deploy containers runtime
+  hosts: all
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: Ensure Ansible can connect
+      ping:
+
+  roles:
+    - role: docker
+      tags: docker
+      when: container_runtime == 'docker'
+
+    - role: podman
+      tags: podman
+      when: container_runtime == 'podman'
+
+    - role: portainer
+      tags: portainer

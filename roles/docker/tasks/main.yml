@@ -1,0 +1,131 @@
+---
+# Install Docker CE and docker-compose-plugin on supported distributions
+
+- name: Load OS-specific variables
+  ansible.builtin.include_vars: "{{ ansible_os_family }}.yml"
+
+- name: Remove legacy Docker packages (RedHat)
+  ansible.builtin.dnf:
+    name: "{{ docker_legacy_packages }}"
+    state: absent
+  when: ansible_os_family == 'RedHat'
+
+- name: Remove legacy Docker packages (Debian)
+  ansible.builtin.apt:
+    name: "{{ docker_legacy_packages }}"
+    state: absent
+  when: ansible_os_family == 'Debian'
+
+- name: Install prerequisite packages (RedHat)
+  ansible.builtin.dnf:
+    name: "{{ docker_prerequisites }}"
+    state: present
+  environment: "{{ proxy_env }}"
+  when: ansible_os_family == 'RedHat'
+
+- name: Install prerequisite packages (Debian)
+  ansible.builtin.apt:
+    name: "{{ docker_prerequisites }}"
+    state: present
+    update_cache: true
+  environment: "{{ proxy_env }}"
+  when: ansible_os_family == 'Debian'
+
+- name: Add Docker CE repository (RedHat)
+  ansible.builtin.get_url:
+    url: "{{ docker_repo_url }}"
+    dest: /etc/yum.repos.d/docker-ce.repo
+    owner: root
+    group: root
+    mode: '0644'
+  environment: "{{ proxy_env }}"
+  when: ansible_os_family == 'RedHat'
+
+- name: Ensure keyrings directory exists (Debian)
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  when: ansible_os_family == 'Debian'
+
+- name: Download Docker GPG key (Debian)
+  ansible.builtin.get_url:
+    url: "{{ docker_gpg_key_url }}"
+    dest: "{{ docker_gpg_key_dest }}"
+    owner: root
+    group: root
+    mode: '0644'
+  environment: "{{ proxy_env }}"
+  when: ansible_os_family == 'Debian'
+
+- name: Add Docker Repository (Debian)
+  ansible.builtin.apt_repository:
+    repo: "{{ docker_repo_line }}"
+    state: present
+    filename: docker
+    update_cache: true
+  environment: "{{ proxy_env }}"
+  when: ansible_os_family == 'Debian'
+
+- name: Install Docker CE packages (RedHat)
+  ansible.builtin.dnf:
+    name: "{{ docker_packages }}"
+    state: present
+    update_cache: true
+  environment: "{{ proxy_env }}"
+  when: ansible_os_family == 'RedHat'
+
+- name: Install Docker CE packages (Debian)
+  ansible.builtin.apt:
+    name: "{{ docker_packages }}"
+    state: present
+    update_cache: true
+  environment: "{{ proxy_env }}"
+  when: ansible_os_family == 'Debian'
+
+- name: Create systemd directory for Docker proxy configuration
+  ansible.builtin.file:
+    path: /etc/systemd/system/docker.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  when: (use_proxy | bool) and http_proxy != ""
+
+- name: Configure Docker daemon proxy environment variables
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/docker.service.d/http-proxy.conf
+    content: |
+      [Service]
+      Environment="HTTP_PROXY={{ http_proxy }}"
+      Environment="HTTPS_PROXY={{ https_proxy }}"
+      Environment="NO_PROXY=localhost,127.0.0.1"
+    owner: root
+    group: root
+    mode: '0644'
+  when: (use_proxy | bool) and http_proxy != ""
+  notify: Restart docker
+
+- name: Start and enable Docker service
+  ansible.builtin.systemd:
+    name: docker
+    state: "{{ docker_service_state }}"
+    enabled: "{{ docker_service_enabled }}"
+    daemon_reload: true
+
+- name: Start and enable Containerd service
+  ansible.builtin.systemd:
+    name: containerd
+    state: "{{ docker_service_state }}"
+    enabled: "{{ docker_service_enabled }}"
+    daemon_reload: true
+
+- name: Add user to docker group
+  ansible.builtin.user:
+    name: "{{ ansible_user | default(ansible_env.USER) }}"
+    groups: docker
+    append: true
+
+

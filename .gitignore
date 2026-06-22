@@ -216,3 +216,17 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+
+# Temporary files
+*.tmp
+
+# Private keys
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+id_ed25519-cert.pub
+id_dsa.pub
+id_ecdsa.pub
+id_ed25519-cert.pub

@@ -1,0 +1,44 @@
+---
+# Deploy and configure Portainer CE
+
+- name: Ensure Portainer destination directory exists
+  ansible.builtin.file:
+    path: "{{ portainer_dest_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+
+- name: Create Portainer local data directory
+  ansible.builtin.file:
+    path: "{{ portainer_dest_dir }}/portainer_data"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Render Portainer docker-compose.yml
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ portainer_dest_dir }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Launch Portainer via Docker Compose
+  ansible.builtin.command:
+    cmd: "docker compose up -d"
+    chdir: "{{ portainer_dest_dir }}"
+  when: portainer_enabled | bool
+  register: portainer_start_result
+  changed_when: "'Created' in portainer_start_result.stdout or 'Started' in portainer_start_result.stdout or 'Running' in portainer_start_result.stdout"
+  environment: "{{ proxy_env | default({}) }}"
+
+- name: Stop and remove Portainer if disabled
+  ansible.builtin.command:
+    cmd: "docker compose down"
+    chdir: "{{ portainer_dest_dir }}"
+  when: not (portainer_enabled | bool)
+  failed_when: false
+  changed_when: false

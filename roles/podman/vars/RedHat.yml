@@ -1,0 +1,15 @@
+---
+podman_packages:
+  - podman
+  - podman-docker
+  - podman-compose
+
+podman_legacy_packages:
+  - docker
+  - docker-client
+  - docker-client-latest
+  - docker-common
+  - docker-latest
+  - docker-latest-logrotate
+  - docker-logrotate
+  - docker-engine

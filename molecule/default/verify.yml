@@ -1,0 +1,24 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: Check if docker command is available
+      ansible.builtin.command: docker --version
+      register: docker_cmd_check
+      changed_when: false
+
+    - name: Verify docker command ran successfully
+      ansible.builtin.assert:
+        that:
+          - docker_cmd_check.rc == 0
+
+    - name: Verify docker service is running
+      ansible.builtin.systemd:
+        name: docker
+      register: docker_service_check
+
+    - name: Assert docker service is active
+      ansible.builtin.assert:
+        that:
+          - docker_service_check.status.ActiveState == 'active'

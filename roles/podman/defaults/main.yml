@@ -1,0 +1,23 @@
+---
+# Defaults for Podman installation
+podman_service_state: started
+podman_service_enabled: true
+podman_group: podman
+
+podman_packages:
+  - podman
+  - podman-docker
+  - podman-compose
+
+# Proxy controls (inherited from global vars if not defined here)
+use_proxy: "{{ use_proxy | default(false) }}"
+http_proxy: "{{ http_proxy | default('') }}"
+https_proxy: "{{ https_proxy | default('') }}"
+
+# Dynamic environment variable dictionary for proxying (returns empty dictionary if use_proxy is false)
+proxy_env: "{{ (use_proxy | bool) | ternary({'http_proxy': http_proxy, 'https_proxy': https_proxy}, {}) }}"
+
+# Registries configuration
+podman_unqualified_search_registries:
+  - docker.io
+

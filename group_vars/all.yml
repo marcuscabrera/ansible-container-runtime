@@ -1,0 +1,27 @@
+---
+# Vars for firewall configuration
+firewall_enabled: false
+
+# Global vars for containers deployment
+deploy_dir: /opt/container
+
+# Container runtime selection: 'docker' or 'podman'
+container_runtime: docker
+
+
+# Docker configurations
+docker_repo_url: "https://download.docker.com/linux/centos/docker-ce.repo"
+docker_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-buildx-plugin
+  - docker-compose-plugin
+
+# Portainer configurations
+portainer_enabled: true
+
+# Proxy configurations for environment traffic
+use_proxy: false # true/false
+http_proxy: "" # "http://[IP or Hostname]:12321"
+https_proxy: "" # "http://[IP or Hostname]:12321"

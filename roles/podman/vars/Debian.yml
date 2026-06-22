@@ -1,0 +1,13 @@
+---
+podman_packages:
+  - podman
+  - podman-docker
+  - podman-compose
+
+podman_legacy_packages:
+  - docker.io
+  - docker-doc
+  - docker-compose
+  - docker-compose-v2
+  - containerd
+  - runc

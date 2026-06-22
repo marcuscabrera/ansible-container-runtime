@@ -1,0 +1,12 @@
+---
+# Defaults for Docker installation
+docker_service_state: started
+docker_service_enabled: true
+
+# Proxy controls
+use_proxy: false
+http_proxy: ""
+https_proxy: ""
+
+# Dynamic environment variable dictionary for proxying (returns empty dictionary if use_proxy is false)
+proxy_env: "{{ (use_proxy | bool) | ternary({'http_proxy': http_proxy, 'https_proxy': https_proxy}, {}) }}"
